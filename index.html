@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>LD36</title>
+</head>
+<body>
+<canvas id="myCanvas" width="640" height="480" style="border:1px solid #808080;">
+</canvas>
+<script>
+GRAVITY_ACCEL = 1.0;
+var game = {
+    ctx: document.getElementById("myCanvas").getContext("2d"),
+    cat_image: new Image(),
+    cats: [
+        {x: 200, y: 20, xvel: 0.0, yvel: 0.0, radius: 64}
+    ]
+};
+game.cat_image.src="/cat.png";
+
+function render() {
+    var ctx = game.ctx;
+    ctx.save();
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    for(var i=0; i<game.cats.length; i++){
+
+        // Ici on calcule la position
+        var cat = game.cats[i];
+        game.cats[i].yvel += GRAVITY_ACCEL;
+        game.cats[i].y += game.cats[i].yvel;
+        if ((cat.y + cat.radius) > ctx.canvas.height){
+            game.cats[i].y = ctx.canvas.height - cat.radius;
+            game.cats[i].yvel = -game.cats[i].yvel;
+        }
+
+        // Ici on dessine
+        ctx.drawImage(game.cat_image, cat.x, cat.y);
+    }
+    ctx.restore();
+}
+
+window.setInterval(render, 20);
+</script>
+</body>
+</html>
