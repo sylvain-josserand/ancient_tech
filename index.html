@@ -5,42 +5,162 @@
     <title>LD36</title>
 </head>
 <body>
-<canvas id="myCanvas" width="640" height="480" style="border:1px solid #808080;">
+<canvas id="myCanvas" width="1000" height="600" style="border:1px solid #808080;">
 </canvas>
 <script>
-GRAVITY_ACCEL = 1.0;
+GRAVITY_ACCEL = 0.02;
+bubble_initial_radius = 32.0;
 var game = {
     ctx: document.getElementById("myCanvas").getContext("2d"),
     cat_image: new Image(),
+    dog_image: new Image(),
+    bg_image: new Image(),
     cats: [
-        {x: 200, y: 20, xvel: 0.0, yvel: 0.0, radius: 64}
+        {x: 300, y: 40, xvel: 4.0, yvel: 0.0, radius: 64},
+        {x: 350, y: 50, xvel: -3.0, yvel: 0.0, radius: 64},
+        {x: 400, y: 20, xvel: 1.0, yvel: 0.0, radius: 64},
+        {x: 550, y: 30, xvel: -2.0, yvel: 0.0, radius: 64}
+    ],
+    bubbles: [
+        {active: false, cat: false},
+        {active: false, cat: false},
+        {active: false, cat: false},
+        {active: false, cat: false},
+        {active: false, cat: false}
     ]
 };
-game.cat_image.src="/cat.png";
+game.dog = {x: 0, y: game.ctx.canvas.height / 2 - 128, xvel: 0.0, yvel: 0.0, radius: 128}
+game.cat_image.src = "./cat.png";
+game.dog_image.src = "./dog.png";
+game.bg_image.src = "./bg.png";
+game.ctx.canvas.addEventListener(
+    'click',
+    function() {
+        var rect = game.ctx.canvas.getBoundingClientRect();
+        var x = event.clientX - rect.left;
+        var y = event.clientY - rect.top;
+        for(var i = 0; i < game.bubbles.length; i++) {
+            var bubble = game.bubbles[i];
+            if(!bubble.active){
+                bubble.active = true;
+                bubble.x = game.dog.x + game.dog.radius;
+                bubble.y = game.dog.y + game.dog.radius;
+                bubble.xvel = 25.0;
+                bubble.yvel = (y - bubble.y) / 15;
+                bubble.radius = bubble_initial_radius;
+                break;
+            }
+        }
+        console.log("click!");
+        console.log(x);
+        console.log(y);
+    },
+    false
+);
+
+function drawBubble(ctx, x, y, radius) {
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0.0, 2 * Math.PI);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#008800';
+    ctx.stroke();
+}
 
 function render() {
     var ctx = game.ctx;
     ctx.save();
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    for(var i=0; i<game.cats.length; i++){
+    // Draw the background
+    ctx.fillStyle = game.ctx.createPattern(game.bg_image, 'repeat');
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-        // Ici on calcule la position
+    // Draw the dog
+    var dog = game.dog;
+    ctx.drawImage(game.dog_image, dog.x, dog.y);
+
+    for(var i = 0; i < game.cats.length; i++){
+
         var cat = game.cats[i];
-        game.cats[i].yvel += GRAVITY_ACCEL;
-        game.cats[i].y += game.cats[i].yvel;
+        cat.yvel += GRAVITY_ACCEL;
+        cat.y += cat.yvel;
+        cat.x += cat.xvel;
         if ((cat.y + cat.radius) > ctx.canvas.height){
             game.cats[i].y = ctx.canvas.height - cat.radius;
             game.cats[i].yvel = -game.cats[i].yvel;
         }
+        if ((cat.x + cat.radius) > ctx.canvas.width){
+            game.cats[i].x = ctx.canvas.width - cat.radius;
+            game.cats[i].xvel = -game.cats[i].xvel;
+        } else if ((cat.x - cat.radius - dog.radius * 2) < 0){
+            game.cats[i].x = cat.radius + dog.radius * 2;
+            game.cats[i].xvel = -game.cats[i].xvel;
+        }
 
         // Ici on dessine
-        ctx.drawImage(game.cat_image, cat.x, cat.y);
+        ctx.drawImage(game.cat_image, cat.x - cat.radius, cat.y - cat.radius);
+    }
+    var bubble_inactive_index = 0;
+    for(var i = 0; i < game.bubbles.length; i++) {
+        var bubble = game.bubbles[i];
+        if(bubble.active) {
+            bubble.x += bubble.xvel;
+            bubble.y += bubble.yvel;
+            if (!bubble.cat){
+                bubble.radius += 1;
+            }
+            if ((bubble.x > ctx.canvas.width) || (bubble.x < 0) || (bubble.y < 0) || (bubble.y > ctx.canvas.height)) {
+                bubble.active = false;
+                bubble.radius = bubble_initial_radius;
+                bubble.cat = false;
+            }
+            else {
+                var gameover = true;
+                for(var j = 0; j < game.cats.length; j++) {
+                    var cat = game.cats[j];
+                    if (
+                        !bubble.cat
+                        && !cat.bubble
+                        && (bubble.x + bubble.radius > cat.x - cat.radius)
+                        && (bubble.x - bubble.radius < cat.x + cat.radius)
+                        && (bubble.y + bubble.radius > cat.y - cat.radius)
+                        && (bubble.y - bubble.radius < cat.y + cat.radius)
+                    ) {
+                        bubble.cat = cat;
+                        cat.bubble = bubble;
+                        break;
+                    }
+                }
+                if (bubble.cat){
+                    bubble.x = bubble.cat.x;
+                    bubble.y = bubble.cat.y;
+                }
+                drawBubble(ctx, bubble.x, bubble.y, bubble.radius);
+            }
+        } else {
+            drawBubble(ctx, 70 + bubble_inactive_index * 40, ctx.canvas.height * 5 / 6, bubble_initial_radius);
+            bubble_inactive_index++;
+        }
+    }
+    var gameover = true;
+    for(var j = 0; j < game.cats.length; j++) {
+        var cat = game.cats[j];
+        if (!cat.bubble){
+            gameover = false;
+        }
+    }
+    if(gameover){
+        game.ctx.fillStyle = '#000000';
+        game.ctx.font = "30px Arial";
+        game.ctx.fillText(
+            "Congratulation! Woof! You won!",
+            game.ctx.canvas.width/3,
+            game.ctx.canvas.height/2
+        );
     }
     ctx.restore();
 }
 
-window.setInterval(render, 20);
+window.setInterval(render, 30);
 </script>
 </body>
 </html>
