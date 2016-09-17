@@ -35,7 +35,7 @@ game.dog_image.src = "./dog.png";
 game.bg_image.src = "./bg.png";
 game.ctx.canvas.addEventListener(
     'click',
-    function() {
+    function(event) {
         var rect = game.ctx.canvas.getBoundingClientRect();
         var x = event.clientX - rect.left;
         var y = event.clientY - rect.top;
